@@ -1,0 +1,4 @@
+cd /d
+git add c++
+git commit -m "update: add how to update(update.txt)"
+git push
