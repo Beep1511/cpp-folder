@@ -1,0 +1,11 @@
+# 过滤 c++ 文件夹下的系统临时文件
+c++/.DS_Store
+c++/Thumbs.db
+c++/desktop.ini
+
+# 过滤 c++ 文件夹下的临时运行产物（如编译出的 .exe 文件或缓存）
+c++/tempCodeRunnerFile.cpp
+c++/*.exe
+
+# 如果有其他不想上传的文件夹，也可以这样写，例如：
+# c++/某个不想上传的文件夹/
