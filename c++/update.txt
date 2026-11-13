@@ -1,4 +1,7 @@
+
 cd /d
+git rm -r --cached .
+git add .gitignore
 git add c++
-git commit -m "update: add how to update(update.txt)"
+git commit -m "update: add CF1503, change .gitignore"
 git push

@@ -1,143 +1,70 @@
-#pragma GCC optimize("O3")
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <queue>
-#include <algorithm>
+#include <bits/stdc++.h>
+
+#define F(i, j, k) for (int i = (j), ENDD = (k); i <= ENDD; ++i)
+#define R(i, j, k) for (int i = (j), ENDD = (k); i >= ENDD; --i)
+#define int long long
 
 using namespace std;
 
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
+const int E = 5e6, INF = 1e18, N = 600;
 
-    int n, m;
-    if (!(cin >> n >> m)) return 0;
+struct edge {
+    int v, w, c, nxt;
+} e[E];
 
-    vector<vector<int>> a(n, vector<int>(m));
-    vector<vector<int>> b(n, vector<int>(m));
+int head[N << 1], pre[N << 1], cur[N << 1], dis[N << 1], flow[N << 1], cost, cnt = 1, s, t;
+bool vis[N << 1];
 
-    for (int i = 0; i < n; ++i)
-        for (int j = 0; j < m; ++j) cin >> a[i][j];
+void init(int u, int v, int w, int c) {
+    e[++cnt] = {v, w, c, head[u]}, head[u] = cnt;
+    e[++cnt] = {u, 0, -c, head[v]}, head[v] = cnt;
+}
 
-    for (int i = 0; i < n; ++i)
-        for (int j = 0; j < m; ++j) cin >> b[i][j];
-
-    // 1. 构建二维初始高度矩阵
-    vector<vector<int>> ha(n, vector<int>(m, 0));
-    vector<vector<int>> hb(n, vector<int>(m, 0));
-
-    auto build_height = [&](const vector<vector<int>>& grid, vector<vector<int>>& h) {
-        h[0][0] = grid[0][0];
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < m; ++j) {
-                if (i == 0 && j == 0) continue;
-                if (j > 0) {
-                    if (grid[i][j] == (grid[i][j-1] + 1) % 3) h[i][j] = h[i][j-1] + 1;
-                    else h[i][j] = h[i][j-1] - 1;
-                } else {
-                    // 第一列，只能从上方推导
-                    if (grid[i][0] == (grid[i-1][0] + 1) % 3) h[i][0] = h[i-1][0] + 1;
-                    else h[i][0] = h[i-1][0] - 1;
-                }
-            }
-        }
-    };
-
-    build_height(a, ha);
-    build_height(b, hb);
-
-    // 2. 匹配奇偶性 (若基准点奇偶性不同，整体偏移3)
-    if (abs(ha[0][0] % 2) != abs(hb[0][0] % 2)) {
-        for (int i = 0; i < n; ++i)
-            for (int j = 0; j < m; ++j) hb[i][j] += 3;
-    }
-
-    // 3. 枚举 6k 整体偏移，找到距离和最小的目标高度面
-    long long min_cost = -1;
-    int best_k = 0;
-    // N*M <= 1000, 高度差极限在 1000 量级
-    for (int k = -1000; k <= 1000; ++k) {
-        long long cur = 0;
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < m; ++j) {
-                cur += abs(ha[i][j] - (hb[i][j] + 6 * k));
-            }
-        }
-        if (min_cost == -1 || cur < min_cost) {
-            min_cost = cur;
-            best_k = k;
-        }
-    }
-
-    vector<vector<int>> tar(n, vector<int>(m));
-    for (int i = 0; i < n; ++i)
-        for (int j = 0; j < m; ++j) tar[i][j] = hb[i][j] + 6 * best_k;
-
-    // 4. BFS 模拟二维高度面的翻折
-    vector<pair<pair<int, int>, int>> ops;
-    queue<pair<int, int>> q;
-    vector<vector<bool>> st(n, vector<bool>(m, false));
-
-    int dx[] = {-1, 1, 0, 0};
-    int dy[] = {0, 0, -1, 1};
-
-    auto check_and_push = [&](int r, int c) {
-        if (r < 0 || r >= n || c < 0 || c >= m || st[r][c]) return;
-        
-        bool can_up = true, can_down = true;
-        for (int i = 0; i < 4; ++i) {
-            int nr = r + dx[i], nc = c + dy[i];
-            if (nr >= 0 && nr < n && nc >= 0 && nc < m) {
-                if (ha[nr][nc] <= ha[r][c]) can_up = false; // 周围必须严格比它高才能网上翻
-                if (ha[nr][nc] >= ha[r][c]) can_down = false; // 周围必须严格比它低才能往下翻
-            }
-        }
-
-        if (ha[r][c] < tar[r][c] && can_up) {
-            q.push({r, c});
-            st[r][c] = true;
-        } else if (ha[r][c] > tar[r][c] && can_down) {
-            q.push({r, c});
-            st[r][c] = true;
-        }
-    };
-
-    for (int i = 0; i < n; ++i)
-        for (int j = 0; j < m; ++j) check_and_push(i, j);
-
+bool spfa() {
+    memset(dis, 0x3f, sizeof dis), memset(flow, 0, sizeof flow), memcpy(cur, head, sizeof head);
+    queue<int> q;
+    q.push(s), flow[s] = INF, dis[s] = 0;
     while (!q.empty()) {
-        auto [r, c] = q.front();
-        q.pop();
-        st[r][c] = false; 
-
-        bool can_up = true, can_down = true;
-        for (int i = 0; i < 4; ++i) {
-            int nr = r + dx[i], nc = c + dy[i];
-            if (nr >= 0 && nr < n && nc >= 0 && nc < m) {
-                if (ha[nr][nc] <= ha[r][c]) can_up = false;
-                if (ha[nr][nc] >= ha[r][c]) can_down = false;
+        int u = q.front(), v;
+        q.pop(), vis[u] = 0;
+        for (int i = head[u]; i; i = e[i].nxt)
+            if (dis[v = e[i].v] > dis[u] + e[i].c && e[i].w) {
+                dis[v] = dis[u] + e[i].c, flow[v] = min(e[i].w, flow[u]), pre[v] = i;
+                if (!vis[v])
+                    vis[v] = 1, q.push(v);
             }
-        }
-
-        if (ha[r][c] < tar[r][c] && can_up) {
-            ha[r][c] += 2;
-            ops.push_back({{r + 1, c + 1}, (ha[r][c] % 3 + 3) % 3});
-            check_and_push(r, c);
-            for (int i = 0; i < 4; ++i) check_and_push(r + dx[i], c + dy[i]);
-        } else if (ha[r][c] > tar[r][c] && can_down) {
-            ha[r][c] -= 2;
-            ops.push_back({{r + 1, c + 1}, (ha[r][c] % 3 + 3) % 3});
-            check_and_push(r, c);
-            for (int i = 0; i < 4; ++i) check_and_push(r + dx[i], c + dy[i]);
-        }
     }
-
-    cout << ops.size() << "\n";
-    for (auto& op : ops) {
-        // 输出操作：1 行 列 新颜色
-        cout << op.first.first << " " << op.first.second << " " << op.second << "\n";
+    if (!flow[t])
+        return 0;
+    cost += flow[t] * dis[t];
+    int u = t;
+    while (u != s) {
+        int id = pre[u];
+        e[id].w -= flow[t], e[id ^ 1].w += flow[t];
+        u = e[id ^ 1].v;
     }
+    return 1;
+}
 
+int n, m;
+
+signed main() {
+    cin.tie(0)->sync_with_stdio(0), cin.tie(0);
+    cin >> n >> m, t = n * 2 + 10;
+    F(i, 1, n) {
+        int a;
+        cin >> a;
+        init(i + n, i, INF, 0);
+        init(i, i + n, INF, a);
+        init(s, i, 1, 0), init(i + n, t, 1, 0);
+    }
+    F(i, 1, m) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        init(u, v + n, INF, w);
+    }
+    while (spfa())
+        ;
+    cout << cost;
     return 0;
 }

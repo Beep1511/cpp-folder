@@ -9,3 +9,10 @@ c++/*.exe
 
 # 如果有其他不想上传的文件夹，也可以这样写，例如：
 # c++/某个不想上传的文件夹/
+
+c++/*.cache
+c++/ptv/
+c++/tempCodeRunnerFile.py
+c++/*.csv
+c++/*.zip
+c++/__pycache__/
